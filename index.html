@@ -1,0 +1,219 @@
+<!Doctype html>
+<html>
+<head>
+    <title>Ball physics</title>
+    <meta charset = "UTF-8">
+    
+    <style>
+        #canvas
+        {
+            display:block;
+            margin:0;
+            padding:0;
+        }
+        body
+        {
+            padding:0;
+            margin:0;
+        }
+    </style>
+</head>
+<body>
+    <canvas id = "canvas" width = "1024" height = "750"></canvas>
+    <script src = "js/sprite.js"></script>
+    <script src = "js/line.js"></script>
+    <script src = "js/levels.js"></script>
+    <script src = "js/ball.js"></script>
+    <script src = "js/newline.js"></script>
+    <script src = "js/flag.js"></script>
+    <script src = "js/levelsRects.js"></script>
+    <script src = "js/gamebreak.js"></script>
+    <script src = "js/menu.js"></script>
+    <script src = "js/draw.js"></script>
+    <script>
+        'use strict'
+        let canvas = document.getElementById('canvas')
+        let ctx = canvas.getContext('2d')
+        canvas.width = window.innerWidth
+        canvas.height = window.innerHeight
+        let cyclesPerTact = 500
+        let gravitationalAcceleration = 0.001 / cyclesPerTact //0.000001
+            
+        let ball = new Ball(10, 20, 80, 0, 0, '#ff0000', 'ball')
+
+        //lines.push(new Line(0, 300, 300, 300, 0, 0, 5, '#0000ff', 'line'))
+        //lines.push(new Line(200, 200, 600, 400, 0, 0, 5, '#0000ff', 'line'))
+        let linesK
+        
+        let menuBackgroundColor = 'rgba(245, 245, 245, 0.52)'
+        
+        let menuIconRect = [
+            [canvas.width - 63 - 20, 20],
+            [63, 63]
+        ]
+        let menuIconLine = [
+            [5, 13], [-5, 22],
+            [5, 28], [-5, 33],
+            [5, 43], [-5, 44]
+        ]
+        let startIconTriangle = 
+        [
+            [menuIconRect[0][0] - 15, menuIconRect[0][1] + 31],
+            [menuIconRect[0][0] - 10 - 54, menuIconRect[0][1] + menuIconRect[1][1] - 5],
+            [menuIconRect[0][0] - 10 - 54, menuIconRect[0][1] + menuIconRect[1][1] - 62 + 5]
+        ]
+        let drawMenu = false
+        let drawMenuIcon = true
+        let physics = false
+        let menuColor = '#ff0000'
+        
+        let levelStarted = false
+        
+        function levelChoosed(i)
+        {
+            ball.posX = levels[i].ballX
+            ball.posY = levels[i].ballY
+            ball.speedX = ball.speedY = 0
+            lines = levels[i].lines.slice()
+            linesK = 0
+            levelStarted = false
+            physics = false
+            flag = []
+            for (let i = 0; i < flagCoords.length; ++i)
+            {
+                let coord = pointRotation(flagCoords[i][0], flagCoords[i][1], levels[thisLevel].flagRotate)
+                flag.push(coord)
+            }
+        }
+        
+        levelChoosed(thisLevel)
+        document.addEventListener('click', function(event)
+        {
+            let coords = mouseCoords(event)
+            if ((levelCompletedWindow || drawMenu) && levelsRectCollision(coords[0], coords[1]))
+            {
+                return    
+            }
+            if (levelCompletedWindow)
+            {
+                if (thisLevel + 1 < levels.length && collisionWithRect(
+                        coords[0], coords[1], 
+                        menuCoords[0] + (menuSize[0] - menuTextRect[0]) / 2, 
+                        menuCoords[1] + blocks[1], 
+                        menuCoords[0] + (menuSize[0] - menuTextRect[0]) / 2 + menuTextRect[0], 
+                        menuCoords[1] + blocks[1] + menuTextRect[1]))
+                {
+                    levelChoosed(++thisLevel)
+                    levelCompletedWindow = false
+                }
+                else if (collisionWithRect(
+                        coords[0], coords[1],
+                        menuCoords[0] + (menuSize[0] - menuTextRect[0]) / 2, 
+                        menuCoords[1] + blocks[2],
+                        menuCoords[0] + (menuSize[0] - menuTextRect[0]) / 2 + menuTextRect[0], 
+                        menuCoords[1] + blocks[2] + menuTextRect[1]))
+                {
+                    levelChoosed(thisLevel)
+                    levelCompletedWindow = false
+                }
+            }
+            else if (drawMenu)
+            {
+                for (let i = 0; i < menuButtons.length - 1; ++i)
+                {
+                    if (collisionWithRect(
+                        coords[0], coords[1], 
+                        menuCoords[0] + (menuSize[0] - menuTextRect[0]) / 2, 
+                        menuCoords[1] + 300 + i * 85, 
+                        menuTextRect[0] + menuCoords[0] + (menuSize[0] - menuTextRect[0]) / 2, 
+                        menuTextRect[1] + menuCoords[1] + 300 + i * 85))
+                        {
+                            drawMenu = false
+                            drawMenuIcon = true
+                            if (menuButtons[i] == 'restart')
+                            {
+                                levelChoosed(thisLevel)
+                            }
+                        }
+                }
+            }
+            else
+            {
+                if (line)
+                {
+                    coords = dotСorrection(coords[0], coords[1], line.radius)
+                    if (collisionCircleWithLine(line.posX, line.posY, coords[0], coords[1], ball.posX, ball.posY, ball.radius))
+                        return
+                    line.posX2 = coords[0]
+                    line.posY2 = coords[1]
+                    lines.push(line)
+                    line = false
+                    if (linesK >= levels[thisLevel].lineK)
+                    {
+                        physics = !physics
+                        levelStarted = true
+                    }
+                }
+                else
+                {
+                    if (!line && collisionWithRect(
+                        coords[0], coords[1], menuIconRect[0][0], menuIconRect[0][1], 
+                        menuIconRect[0][0] + menuIconRect[1][0], menuIconRect[0][1] + menuIconRect[1][1]))
+                    {
+                        drawMenu = true
+                        drawMenuIcon = false
+                        physics = false
+                    }
+                    else if (collisionWithRect(
+                        coords[0], coords[1], menuIconRect[0][0] - 73, menuIconRect[0][1], menuIconRect[0][0] - 73 + menuIconRect[1][0], menuIconRect[0][1] + menuIconRect[1][1]))
+                    {
+                        physics = !physics
+                        levelStarted = true
+                    }
+                    else if (!levelStarted)
+                    {  
+                        if (linesK < levels[thisLevel].lineK)
+                        {
+                            coords = dotСorrection(coords[0], coords[1], dotRadius)
+                            if (ball.collisionWithDot(coords[0], coords[1]))
+                                return
+                            line = new Line(coords[0], coords[1], coords[0], coords[1], dotRadius, '#0000ff', 'line')
+                            linesK++
+                        }
+                    }
+                }
+            }
+        })
+        function gamePhysics()
+        {
+            if (physics)
+            {
+                for (let i = 0; i < cyclesPerTact; ++i)
+                {
+                    ball.physics()
+                    ball.move()
+                    if (flagCollision(levels[thisLevel].flagX, levels[thisLevel].flagY))
+                    {
+                        levels[thisLevel].unlock = 2
+                        if (thisLevel + 1 < levels.length)
+                            levels[thisLevel + 1].unlock = (levels[thisLevel + 1].unlock == 2)?2:1 
+                        levelCompletedWindow = true
+                    }
+                    if (!ball.onMap())
+                        levelChoosed(thisLevel)
+                }
+            }
+        }
+        function gameLoop()
+        {
+            draw()
+
+            gamePhysics()
+            
+            menu()
+            requestAnimationFrame(gameLoop)
+        }
+        requestAnimationFrame(gameLoop)
+    </script>
+</body>
+</html>
