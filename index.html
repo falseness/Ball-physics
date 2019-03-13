@@ -29,6 +29,7 @@
     <script src = "js/levelsRects.js"></script>
     <script src = "js/gamebreak.js"></script>
     <script src = "js/menu.js"></script>
+    <script src = "js/bounce.js"></script>
     <script src = "js/draw.js"></script>
     <script>
         'use strict'
@@ -69,6 +70,21 @@
         
         let levelStarted = false
         
+        function addNewLine(coords)
+        {
+            coords = dotСorrection(coords[0], coords[1], line.radius)
+            if (collisionCircleWithLine(line.posX, line.posY, coords[0], coords[1], ball.posX, ball.posY, ball.radius))
+                return false
+            line.posX2 = coords[0]
+            line.posY2 = coords[1]
+            lines.push(line)
+            
+            return true
+        }
+        function unfastenLastLine()
+        {
+            lines.pop()
+        }
         function levelChoosed(i)
         {
             ball.posX = levels[i].ballX
@@ -84,6 +100,8 @@
                 let coord = pointRotation(flagCoords[i][0], flagCoords[i][1], levels[thisLevel].flagRotate)
                 flag.push(coord)
             }
+            
+            bounce.setDrawEnable(true)
         }
         
         levelChoosed(thisLevel)
@@ -141,16 +159,13 @@
             {
                 if (line)
                 {
-                    coords = dotСorrection(coords[0], coords[1], line.radius)
-                    if (collisionCircleWithLine(line.posX, line.posY, coords[0], coords[1], ball.posX, ball.posY, ball.radius))
+                    if (!addNewLine(coords))
                         return
-                    line.posX2 = coords[0]
-                    line.posY2 = coords[1]
-                    lines.push(line)
                     line = false
                     if (linesK >= levels[thisLevel].lineK)
                     {
-                        physics = !physics
+                        bounce.setDrawEnable(false)
+                        physics = true
                         levelStarted = true
                     }
                 }
@@ -184,14 +199,27 @@
                 }
             }
         })
+        
+        document.addEventListener('mousemove', function(event)
+        {
+            bounce.calc(mouseCoords(event))
+        })
         function gamePhysics()
+        {
+            ball.physics()
+            ball.move()
+        }
+        function restart()
+        {
+            levelChoosed(thisLevel)
+        }
+        function gameMechanics()
         {
             if (physics)
             {
                 for (let i = 0; i < cyclesPerTact; ++i)
                 {
-                    ball.physics()
-                    ball.move()
+                    gamePhysics()
                     if (flagCollision(levels[thisLevel].flagX, levels[thisLevel].flagY))
                     {
                         levels[thisLevel].unlock = 2
@@ -200,7 +228,7 @@
                         levelCompletedWindow = true
                     }
                     if (!ball.onMap())
-                        levelChoosed(thisLevel)
+                        restart()
                 }
             }
         }
@@ -208,9 +236,10 @@
         {
             draw()
 
-            gamePhysics()
+            gameMechanics()
             
             menu()
+            
             requestAnimationFrame(gameLoop)
         }
         requestAnimationFrame(gameLoop)

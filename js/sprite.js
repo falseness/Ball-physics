@@ -14,4 +14,28 @@ class Sprite
         this.posX += this.speedX 
         this.posY += this.speedY
     }
+    getX()
+    {
+        return this.posX
+    }
+    getY()
+    {
+        return this.posY
+    }
+    setX(x)
+    {
+        this.posX = x
+    }
+    setY(y)
+    {
+        this.posY = y
+    }
+    setSpeedX(speedX)
+    {
+        this.speedX = speedX
+    }
+    setSpeedY(speedY)
+    {
+        this.speedY = speedY
+    }
 }
